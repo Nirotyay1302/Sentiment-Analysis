@@ -10,6 +10,8 @@ import platform
 import re
 from textblob import TextBlob
 import io
+from threading import Thread, Event
+from flask import Flask, jsonify
 
 # Set Tesseract path for Windows if available; otherwise rely on system PATH (works in Docker)
 if platform.system() == "Windows":
@@ -20,6 +22,32 @@ if platform.system() == "Windows":
 # Load sentiment model for dataset/social media
 pipe = joblib.load("model.joblib")
 labels = {0: "Negative", 1: "Neutral", 2: "Positive"}
+
+# Health-check server (Flask) running in background so hosting platforms can probe readiness
+health_app = Flask("health")
+ready_event = Event()
+
+
+@health_app.route("/health")
+def health():
+    return jsonify({"ready": ready_event.is_set()})
+
+
+def run_health_server(port: int = 8502):
+    # Start Flask with minimal output
+    health_app.run(host="0.0.0.0", port=port, threaded=True)
+
+# After model and resources loaded, set readiness
+ready_event.set()
+
+# Start health server in background thread (non-blocking)
+try:
+    health_port = int(os.environ.get("HEALTH_PORT", "8502"))
+    t = Thread(target=run_health_server, args=(health_port,), daemon=True)
+    t.start()
+except Exception:
+    # If Flask or threading cannot start in the environment, continue without health endpoint
+    pass
 
 
 def get_model_classes(model):
