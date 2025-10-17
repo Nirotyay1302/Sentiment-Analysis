@@ -5,12 +5,17 @@ import snscrape.modules.twitter as sntwitter
 from youtube_comment_downloader import YoutubeCommentDownloader
 from PIL import Image
 import pytesseract
+import os
+import platform
 import re
 from textblob import TextBlob
 import io
 
-# Set Tesseract path for Windows (update if installed elsewhere)
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# Set Tesseract path for Windows if available; otherwise rely on system PATH (works in Docker)
+if platform.system() == "Windows":
+    win_path = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    if os.path.exists(win_path):
+        pytesseract.pytesseract.tesseract_cmd = win_path
 
 # Load sentiment model for dataset/social media
 pipe = joblib.load("model.joblib")
