@@ -9,7 +9,8 @@ import re
 from textblob import TextBlob
 import io
 from threading import Thread, Event
-from flask import Flask, jsonify
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
 
 # (OCR support removed for simpler hosting; app no longer requires Tesseract)
 
@@ -17,19 +18,31 @@ from flask import Flask, jsonify
 pipe = joblib.load("model.joblib")
 labels = {0: "Negative", 1: "Neutral", 2: "Positive"}
 
-# Health-check server (Flask) running in background so hosting platforms can probe readiness
-health_app = Flask("health")
+ # Health-check server using builtin http.server so hosting platforms can probe readiness
 ready_event = Event()
 
 
-@health_app.route("/health")
-def health():
-    return jsonify({"ready": ready_event.is_set()})
+class _HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == "/health":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            payload = {"ready": ready_event.is_set()}
+            self.wfile.write(json.dumps(payload).encode("utf-8"))
+        else:
+            self.send_response(404)
+            self.end_headers()
 
 
 def run_health_server(port: int = 8502):
-    # Start Flask with minimal output
-    health_app.run(host="0.0.0.0", port=port, threaded=True)
+    try:
+        server = HTTPServer(("0.0.0.0", port), _HealthHandler)
+        server.serve_forever()
+    except Exception:
+        # If the platform restricts starting a TCP server, skip silently
+        return
+
 
 # After model and resources loaded, set readiness
 ready_event.set()
@@ -40,7 +53,6 @@ try:
     t = Thread(target=run_health_server, args=(health_port,), daemon=True)
     t.start()
 except Exception:
-    # If Flask or threading cannot start in the environment, continue without health endpoint
     pass
 
 

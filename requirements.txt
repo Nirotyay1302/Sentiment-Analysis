@@ -8,5 +8,5 @@ textblob
 plotly
 matplotlib
 numpy
-Flask
+
 
