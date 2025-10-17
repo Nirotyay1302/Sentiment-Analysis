@@ -3,8 +3,6 @@ import pandas as pd
 import joblib
 import snscrape.modules.twitter as sntwitter
 from youtube_comment_downloader import YoutubeCommentDownloader
-from PIL import Image
-import pytesseract
 import os
 import platform
 import re
@@ -13,11 +11,7 @@ import io
 from threading import Thread, Event
 from flask import Flask, jsonify
 
-# Set Tesseract path for Windows if available; otherwise rely on system PATH (works in Docker)
-if platform.system() == "Windows":
-    win_path = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-    if os.path.exists(win_path):
-        pytesseract.pytesseract.tesseract_cmd = win_path
+# (OCR support removed for simpler hosting; app no longer requires Tesseract)
 
 # Load sentiment model for dataset/social media
 pipe = joblib.load("model.joblib")
@@ -146,7 +140,6 @@ mode = st.sidebar.selectbox(
     [
         "Analyze Dataset",
         "Analyze Social Media Link",
-        "Analyze Screenshot(s)",
         "Manual Text Input"
     ],
     key="mode_selectbox"
@@ -157,10 +150,6 @@ def clean_text(text):
     text = re.sub(r'[^A-Za-z0-9\s.,!?]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
-
-def extract_text_from_image(image):
-    text = pytesseract.image_to_string(image, config='--psm 6')
-    return clean_text(text)
 
 def analyze_sentiment_textblob(text):
     blob = TextBlob(text)
@@ -418,46 +407,7 @@ elif mode == "Analyze Social Media Link":
         else:
             st.error("No comments found or could not fetch comments.")
 
-# ----------- Mode 3: Screenshot Analyzer (multiple) -----------
-elif mode == "Analyze Screenshot(s)":
-    uploaded_files = st.file_uploader(
-        "Upload screenshots (PNG, JPG, JPEG)",
-        type=["png","jpg","jpeg"],
-        accept_multiple_files=True,
-        key="screenshot_uploader"
-    )
-    all_texts = []
-    if uploaded_files:
-        for file in uploaded_files:
-            img = Image.open(file)
-            text = extract_text_from_image(img)
-            all_texts.append(text)
-    if all_texts:
-        st.header("📝 Extracted Texts & Sentiments")
-        summary_counts = {"Positive":0, "Neutral":0, "Negative":0}
-        for i, text in enumerate(all_texts, 1):
-            sentiment = analyze_sentiment_textblob(text)
-            summary_counts[sentiment] += 1
-            st.markdown(f"**Screenshot {i}:** {sentiment}")
-            st.write(text)
-        # --- Summary ---
-        st.header("📊 Sentiment Summary")
-        total = sum(summary_counts.values())
-        # Build a small dataframe to support filtering and charts
-        stats_df = pd.DataFrame(list(summary_counts.items()), columns=["Sentiment", "Count"]).set_index("Sentiment")
-
-        # Sentiment filter for screenshots
-        sentiment_choices = ["Positive", "Neutral", "Negative"]
-        selected_sentiments = st.multiselect("Filter screenshots by sentiment (text)", options=sentiment_choices, default=sentiment_choices, key="screenshot_sentiment_filter")
-
-        filtered_stats = stats_df.reindex(["Positive", "Neutral", "Negative"]).loc[selected_sentiments] if selected_sentiments else stats_df.reindex(["Positive", "Neutral", "Negative"])
-
-        if not filtered_stats.empty and filtered_stats["Count"].sum() > 0:
-            render_pie_chart(filtered_stats["Count"], colors=["#2ecc71", "#f1c40f", "#e74c3c"])  
-            for key, row in filtered_stats.iterrows():
-                st.write(f"{key}: {int(row['Count'])} ({round(int(row['Count'])/total*100,2)}%)")
-        else:
-            st.info("No screenshots match the selected sentiment filters.")
+# (Screenshot / OCR mode removed for simplified hosting)
 
 # ----------- Mode 4: Manual Text Input -----------
 elif mode == "Manual Text Input":

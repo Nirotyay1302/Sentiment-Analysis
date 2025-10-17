@@ -4,9 +4,8 @@ joblib
 scikit-learn
 snscrape
 youtube-comment-downloader
-Pillow
-pytesseract
 textblob
 plotly
 matplotlib
 numpy
+

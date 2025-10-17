@@ -1,13 +1,8 @@
 FROM python:3.11-slim
 
-# Install system dependencies for Tesseract and fonts
+# Minimal system deps (no Tesseract or image libs required)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    tesseract-ocr \
-    libtesseract-dev \
-    libleptonica-dev \
-    pkg-config \
-    poppler-utils \
-    fonts-dejavu-core \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
