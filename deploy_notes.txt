@@ -1,5 +1,0 @@
-Quick checklist before deploying to GitHub/Streamlit:
-
-- Add a small .streamlit/config.toml if you want to set server.port or enable CORS.
-- Make sure the virtual environment isn't committed (.gitignore already added).
-- If using Streamlit Cloud and OCR isn't critical, you can deploy as-is; otherwise deploy with Docker.
